@@ -1,3 +1,42 @@
+Metadata-Version: 2.4
+Name: mesa-batch-runner
+Version: 0.1.0
+Summary: A batch runner for MESA stellar evolution simulations
+Author-email: Your Name <your.email@example.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/yourusername/mesa-batch-runner
+Project-URL: Documentation, https://github.com/yourusername/mesa-batch-runner#readme
+Project-URL: Repository, https://github.com/yourusername/mesa-batch-runner
+Project-URL: Issues, https://github.com/yourusername/mesa-batch-runner/issues
+Keywords: MESA,stellar evolution,astrophysics,batch processing,simulation
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Scientific/Engineering :: Astronomy
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.17.0
+Requires-Dist: pandas>=1.0.0
+Requires-Dist: mesa_reader
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Provides-Extra: plotting
+Requires-Dist: matplotlib>=3.0.0; extra == "plotting"
+Dynamic: license-file
+
 # MESA Batch Runner
 
 A Python package for running parameter sweeps of [MESA](https://docs.mesastar.org/) stellar evolution simulations.

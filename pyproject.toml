@@ -7,7 +7,7 @@ name = "mesa-batch-runner"
 version = "0.1.0"
 description = "A batch runner for MESA stellar evolution simulations"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
@@ -15,7 +15,6 @@ keywords = ["MESA", "stellar evolution", "astrophysics", "batch processing", "si
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
     "Programming Language :: Python :: 3",
@@ -24,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Astronomy",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -55,7 +55,8 @@ Repository = "https://github.com/yourusername/mesa-batch-runner"
 Issues = "https://github.com/yourusername/mesa-batch-runner/issues"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["mesa_batch_runner*"]
 
 [tool.black]
 line-length = 100
