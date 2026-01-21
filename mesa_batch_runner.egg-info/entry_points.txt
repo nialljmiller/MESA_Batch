@@ -1,2 +1,0 @@
-[console_scripts]
-mesa-batch = mesa_batch_runner.cli:main

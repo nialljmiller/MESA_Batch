@@ -1,0 +1,121 @@
+! Example MESA inlist for MESA_infer
+! ==================================
+!
+! This inlist demonstrates how to specify parameter ranges for inference.
+! MESA_infer will automatically detect these patterns and treat them as
+! free parameters to be explored.
+!
+! Parameter specification patterns:
+!   1. List syntax:     param = val1, val2, val3
+!   2. Range syntax:    param_min = X, param_max = Y
+!   3. Boolean list:    flag = .true., .false.
+!
+! Any parameter not matching these patterns is treated as fixed.
+
+&star_job
+
+    ! Load pre-main-sequence model
+    create_pre_main_sequence_model = .true.
+    
+    ! Initial composition - EXPLORE METALLICITY
+    ! Using list syntax for discrete metallicity values
+    initial_z = 0.001, 0.005, 0.01, 0.014, 0.02, 0.03
+    
+    ! Helium follows enrichment law Y = Y_p + (dY/dZ) * Z
+    ! This will be computed from initial_z
+    
+    ! PGSTAR settings
+    pgstar_flag = .false.
+
+/ ! end of star_job namelist
+
+
+&eos
+    ! Use default MESA EOS
+/ ! end of eos namelist
+
+
+&kap
+    ! Opacity tables
+    Zbase = 0.014
+    
+    ! Low-T opacities
+    use_Type2_opacities = .true.
+    kap_lowT_prefix = 'lowT_fa05_gs98'
+    
+/ ! end of kap namelist
+
+
+&controls
+
+    ! ----- EXPLORATION PARAMETERS -----
+    
+    ! Initial mass - CONTINUOUS RANGE
+    initial_mass_min = 0.8
+    initial_mass_max = 2.0
+    
+    ! Mixing length parameter - CONTINUOUS RANGE
+    mixing_length_alpha_min = 1.5
+    mixing_length_alpha_max = 2.5
+    
+    ! Overshooting - CONTINUOUS RANGE
+    overshoot_f_above_burn_h_core_min = 0.0
+    overshoot_f_above_burn_h_core_max = 0.03
+    overshoot_f0_above_burn_h_core = 0.005
+    
+    ! ----- FIXED PARAMETERS -----
+    
+    ! Atmosphere boundary condition
+    atm_option = 'T_tau'
+    atm_T_tau_relation = 'Eddington'
+    atm_T_tau_opacity = 'fixed'
+    
+    ! Nuclear reaction network
+    default_net_name = 'pp_and_cno_extras.net'
+    
+    ! Diffusion and settling (optional - can be exploration parameter)
+    do_element_diffusion = .false.
+    
+    ! Rotation (optional - can be exploration parameter)
+    ! rotation_flag = .true., .false.  ! Uncomment to explore
+    
+    ! ----- STOPPING CONDITIONS -----
+    
+    ! Stop at specified age (years)
+    max_age = 1.5d10
+    
+    ! Or stop when central H depleted
+    xa_central_lower_limit_species(1) = 'h1'
+    xa_central_lower_limit(1) = 1d-6
+    
+    ! ----- OUTPUT CONTROLS -----
+    
+    ! History output
+    history_interval = 10
+    terminal_interval = 100
+    write_header_frequency = 10
+    
+    ! Profile output
+    profile_interval = 100
+    max_num_profile_models = 100
+    
+    ! Photo output for restart
+    photo_interval = 500
+    photo_digits = 6
+    
+    ! ----- MESH AND TIMESTEP -----
+    
+    mesh_delta_coeff = 1.0
+    time_delta_coeff = 1.0
+    varcontrol_target = 1d-4
+    
+    ! ----- SOLVER SETTINGS -----
+    
+    newton_iterations_limit = 20
+    
+/ ! end of controls namelist
+
+
+&pgstar
+    ! Plotting disabled for inference runs
+/ ! end of pgstar namelist

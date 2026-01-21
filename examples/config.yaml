@@ -1,0 +1,195 @@
+# MESA_infer Configuration File
+# ==============================
+#
+# This file configures the inference run. All paths should be absolute
+# or relative to the working directory where you run the inference.
+
+# -----------------------------------------------------------------------------
+# MESA Configuration
+# -----------------------------------------------------------------------------
+mesa:
+  # Path to your MESA work directory (required)
+  work_dir: "/path/to/mesa/work"
+  
+  # Path to MESA installation (optional - uses MESA_DIR env var if not set)
+  mesa_dir: null
+  
+  # Name of the inlist file to use
+  inlist_name: "inlist_project"
+  
+  # Maximum time (seconds) for a single MESA run
+  timeout: 7200
+  
+  # Execution scheduler: "local", "slurm", or "pbs"
+  scheduler: "local"
+  
+  # Number of parallel MESA runs
+  parallel_runs: 4
+  
+  # Output management
+  output_dir: "output"
+  keep_logs: true
+  keep_photos: false
+  keep_models: false
+  compress_outputs: false
+
+# -----------------------------------------------------------------------------
+# SLURM Settings (only used if scheduler: "slurm")
+# -----------------------------------------------------------------------------
+slurm:
+  partition: "compute"
+  time: "04:00:00"
+  nodes: 1
+  ntasks: 1
+  cpus_per_task: 4
+  mem: "8G"
+  account: null
+  qos: null
+  constraint: null
+  exclude: null
+  
+  # Commands to run at start of each job (e.g., module loads)
+  setup_commands:
+    - "module purge"
+    - "module load mesa"
+    - "module load mesasdk"
+
+# -----------------------------------------------------------------------------
+# Sampler Configuration
+# -----------------------------------------------------------------------------
+sampler:
+  # --- Genetic Algorithm Settings ---
+  
+  # Population size (number of individuals)
+  population_size: 64
+  
+  # Number of generations to evolve
+  num_generations: 100
+  
+  # Crossover probability (0-1)
+  crossover_probability: 0.5
+  
+  # Mutation probability (0-1)
+  mutation_probability: 0.5
+  
+  # Tournament selection size
+  tournament_size: 2
+  
+  # Fraction of population to preserve as elite
+  elitism_fraction: 0.0625
+  
+  # Mutation type: "gaussian" or "uniform"
+  mutation_type: "gaussian"
+  
+  # --- DE-MCMC Hybrid Settings ---
+  
+  # Use Differential Evolution MCMC moves
+  demc_hybrid: true
+  
+  # Fraction of population to apply DE-MCMC moves
+  demc_fraction: 0.5
+  
+  # --- SMC-DEMC Refinement ---
+  
+  # Run SMC-DEMC after GA converges
+  run_smc_refinement: true
+  
+  # ESS threshold for resampling (fraction of N)
+  smc_ess_trigger: 0.6
+  
+  # Number of DE-MH moves per SMC stage
+  smc_moves_per_stage: 3
+  
+  # Number of posterior samples to generate
+  smc_nsamples: 50000
+  
+  # --- Checkpointing ---
+  
+  # Save checkpoint every N generations
+  checkpoint_interval: 10
+  
+  # Path to save/load checkpoints
+  checkpoint_dir: "checkpoints"
+
+# -----------------------------------------------------------------------------
+# Likelihood Configuration
+# -----------------------------------------------------------------------------
+likelihood:
+  # Data type: "sed", "photometric", "spectroscopic", or "combined"
+  data_type: "sed"
+  
+  # --- SED Settings ---
+  
+  # Wavelength range to fit (Angstroms)
+  wavelength_min: 3000.0
+  wavelength_max: 10000.0
+  
+  # Extinction parameters
+  extinction_av: 0.0
+  extinction_rv: 3.1
+  
+  # Normalize SED (distance-independent)
+  normalize: true
+  
+  # Smoothing (Angstroms, 0 to disable)
+  smoothing_sigma: 0.0
+  
+  # Binning (Angstroms, 0 to disable)
+  bin_size: 0.0
+  
+  # Systematic error floor (fraction)
+  systematic_error: 0.0
+  
+  # Wavelength regions to mask [(start, end), ...]
+  mask_regions: []
+  
+  # --- Photometric Settings ---
+  
+  # Use colors (distance-independent)
+  use_colors: true
+  
+  # Use absolute magnitudes (requires parallax)
+  use_absolute_mags: false
+  
+  # Fit distance as free parameter
+  fit_distance: false
+  
+  # --- Spectroscopic Settings ---
+  
+  # Weight for Teff constraint
+  teff_weight: 1.0
+  
+  # Weight for logg constraint
+  logg_weight: 1.0
+  
+  # Weight for [Fe/H] constraint
+  feh_weight: 1.0
+  
+  # Systematic error floors
+  teff_systematic: 50.0
+  logg_systematic: 0.1
+  feh_systematic: 0.05
+
+# -----------------------------------------------------------------------------
+# Observational Data
+# -----------------------------------------------------------------------------
+# Note: You can also load data from CSV files in your Python script
+
+observations:
+  # Path to SED data file
+  sed_file: "data/observed_sed.csv"
+  
+  # Spectroscopic parameters (optional)
+  teff: null
+  teff_err: null
+  logg: null
+  logg_err: null
+  feh: null
+  feh_err: null
+  
+  # Parallax (optional, for absolute magnitudes)
+  parallax: null        # mas
+  parallax_err: null    # mas
+  
+  # Photometry file (optional)
+  photometry_file: null
