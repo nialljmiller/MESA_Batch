@@ -30,10 +30,13 @@ class ObservationalData:
     # Spectroscopic parameters
     teff: Optional[float] = None
     teff_error: Optional[float] = None
+    teff_err: Optional[float] = None
     logg: Optional[float] = None
     logg_error: Optional[float] = None
+    logg_err: Optional[float] = None
     feh: Optional[float] = None
     feh_error: Optional[float] = None
+    feh_err: Optional[float] = None
     
     # Abundances
     abundances: Optional[Dict[str, float]] = None
@@ -42,16 +45,39 @@ class ObservationalData:
     # Astrometric data
     parallax: Optional[float] = None  # mas
     parallax_error: Optional[float] = None
+    parallax_err: Optional[float] = None
     distance: Optional[float] = None  # pc
     distance_error: Optional[float] = None
+    distance_err: Optional[float] = None
     
     # Extinction
     av: Optional[float] = None
     av_error: Optional[float] = None
+    av_err: Optional[float] = None
     
     # Metadata
     source_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self._sync_error_fields()
+
+    def _sync_error_fields(self) -> None:
+        mappings = [
+            ("teff_err", "teff_error"),
+            ("logg_err", "logg_error"),
+            ("feh_err", "feh_error"),
+            ("parallax_err", "parallax_error"),
+            ("distance_err", "distance_error"),
+            ("av_err", "av_error"),
+        ]
+        for alias, canonical in mappings:
+            alias_val = getattr(self, alias)
+            canonical_val = getattr(self, canonical)
+            if canonical_val is None and alias_val is not None:
+                setattr(self, canonical, alias_val)
+            elif alias_val is None and canonical_val is not None:
+                setattr(self, alias, canonical_val)
     
     @classmethod
     def from_csv(cls, filepath: Union[str, Path], **kwargs) -> ObservationalData:
@@ -93,6 +119,7 @@ class ObservationalData:
                 setattr(data, col, df[col].iloc[0])
             if f'{col}_error' in df.columns:
                 setattr(data, f'{col}_error', df[f'{col}_error'].iloc[0])
+        data._sync_error_fields()
         
         return data
     

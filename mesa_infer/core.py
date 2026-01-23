@@ -87,8 +87,8 @@ class MESAInfer:
     
     def __init__(
         self,
-        inlist_path: Union[str, Path],
-        data_path: Union[str, Path],
+        inlist_path: Optional[Union[str, Path, InferConfig]] = None,
+        data_path: Optional[Union[str, Path]] = None,
         work_dir: Optional[Union[str, Path]] = None,
         output_dir: Optional[Union[str, Path]] = None,
         config: Optional[InferConfig] = None,
@@ -107,47 +107,44 @@ class MESAInfer:
             mesa_dir: Override MESA_DIR environment variable
             verbose: Print progress information
         """
-        self.inlist_path = Path(inlist_path)
-        self.data_path = Path(data_path)
-        self.work_dir = Path(work_dir) if work_dir else self.inlist_path.parent
-        self.output_dir = Path(output_dir) if output_dir else Path("mesa_infer_output")
-        self.verbose = verbose
-        
+        if isinstance(inlist_path, InferConfig) and config is None and data_path is None:
+            config = inlist_path
+            inlist_path = None
+
         # Configuration
         self.config = config or InferConfig()
+
+        self.verbose = verbose
         
         # Override MESA_DIR if provided
         if mesa_dir:
             self.config.mesa.mesa_dir = mesa_dir
+
+        resolved_work_dir = work_dir or self.config.mesa.work_dir
+        if resolved_work_dir:
+            self.work_dir = Path(resolved_work_dir)
+        elif inlist_path:
+            self.work_dir = Path(inlist_path).parent
+        else:
+            self.work_dir = None
+
+        resolved_output_dir = output_dir or self.config.output_dir or "mesa_infer_output"
+        self.output_dir = Path(resolved_output_dir)
+        self.config.output_dir = self.output_dir
+
+        if inlist_path is None and self.config.mesa.inlist_name and self.work_dir:
+            inlist_path = self.work_dir / self.config.mesa.inlist_name
+
+        self.inlist_path = Path(inlist_path) if inlist_path else None
+        self.data_path = Path(data_path) if data_path else None
         
-        # Validate paths
-        if not self.inlist_path.exists():
-            raise FileNotFoundError(f"Inlist not found: {self.inlist_path}")
-        if not self.data_path.exists():
-            raise FileNotFoundError(f"Data file not found: {self.data_path}")
-        
-        # Parse inlist to get parameter space
-        self._log("Parsing inlist for parameter space...")
-        self.parser = InlistParser(str(self.inlist_path))
-        self.parameters = self.parser.get_exploration_parameters()
-        
-        if not self.parameters:
-            raise ValueError("No exploration parameters found in inlist. "
-                           "Use list syntax (e.g., initial_mass = 1.0, 2.0, 5.0) "
-                           "or range syntax (e.g., initial_z_min = 0.001, initial_z_max = 0.02)")
-        
-        self._log(f"Found {len(self.parameters)} parameters to explore:")
-        for name, spec in self.parameters.items():
-            if spec.param_type == ParameterType.CONTINUOUS:
-                self._log(f"  {name}: [{spec.bounds[0]:.4g}, {spec.bounds[1]:.4g}] (continuous)")
-            elif spec.param_type == ParameterType.CATEGORICAL:
-                self._log(f"  {name}: {spec.categories} (categorical)")
-            else:
-                self._log(f"  {name}: [{spec.bounds[0]:.4g}, {spec.bounds[1]:.4g}] (integer)")
-        
-        # Load observational data
-        self._log("Loading observational data...")
-        self.obs_data = self._load_data()
+        self.parser: Optional[InlistParser] = None
+        self.parameters: Dict[str, ParameterSpec] = {}
+        self.obs_data: Optional[ObservationalData] = None
+
+        if self.inlist_path and self.data_path:
+            self.parse_inlist()
+            self.load_observations(self.data_path)
         
         # Initialize components (lazy)
         self._runner: Optional[MESARunner] = None
@@ -167,12 +164,63 @@ class MESAInfer:
     
     def _load_data(self) -> ObservationalData:
         """Load observational data from CSV."""
+        if self.data_path is None:
+            raise ValueError("Data path is not set. Call load_observations first.")
         return ObservationalData.from_csv(str(self.data_path))
+
+    def load_observations(
+        self,
+        data: Union[str, Path, ObservationalData],
+    ) -> ObservationalData:
+        """Load observational data from a CSV path or ObservationalData."""
+        if isinstance(data, ObservationalData):
+            self.obs_data = data
+            self.data_path = None
+        else:
+            self.data_path = Path(data)
+            if not self.data_path.exists():
+                raise FileNotFoundError(f"Data file not found: {self.data_path}")
+            self.obs_data = ObservationalData.from_csv(str(self.data_path))
+        return self.obs_data
+
+    def set_observations(self, data: ObservationalData) -> None:
+        """Set observational data directly."""
+        self.load_observations(data)
+
+    def parse_inlist(self, inlist_path: Optional[Union[str, Path]] = None) -> None:
+        """Parse the inlist and detect exploration parameters."""
+        if inlist_path is not None:
+            self.inlist_path = Path(inlist_path)
+
+        if self.inlist_path is None:
+            raise ValueError("Inlist path is not set.")
+        if not self.inlist_path.exists():
+            raise FileNotFoundError(f"Inlist not found: {self.inlist_path}")
+
+        self._log("Parsing inlist for parameter space...")
+        self.parser = InlistParser(str(self.inlist_path))
+        self.parameters = self.parser.get_exploration_parameters()
+
+        if not self.parameters:
+            raise ValueError("No exploration parameters found in inlist. "
+                             "Use list syntax (e.g., initial_mass = 1.0, 2.0, 5.0) "
+                             "or range syntax (e.g., initial_z_min = 0.001, initial_z_max = 0.02)")
+
+        self._log(f"Found {len(self.parameters)} parameters to explore:")
+        for name, spec in self.parameters.items():
+            if spec.param_type == ParameterType.CONTINUOUS:
+                self._log(f"  {name}: [{spec.bounds[0]:.4g}, {spec.bounds[1]:.4g}] (continuous)")
+            elif spec.param_type == ParameterType.CATEGORICAL:
+                self._log(f"  {name}: {spec.categories} (categorical)")
+            else:
+                self._log(f"  {name}: [{spec.bounds[0]:.4g}, {spec.bounds[1]:.4g}] (integer)")
     
     @property
     def runner(self) -> MESARunner:
         """Get or create MESA runner."""
         if self._runner is None:
+            if self.work_dir is None:
+                raise ValueError("work_dir is not set. Provide work_dir or set it in config.")
             self._runner = MESARunner(
                 mesa_dir=self.config.mesa.mesa_dir,
                 work_dir=str(self.work_dir),
@@ -185,6 +233,8 @@ class MESAInfer:
     def likelihood(self) -> SEDLikelihood:
         """Get or create likelihood function."""
         if self._likelihood is None:
+            if self.obs_data is None:
+                raise ValueError("Observational data not loaded. Call load_observations first.")
             lc = self.config.likelihood
             
             if lc.data_type == "sed":
@@ -204,9 +254,9 @@ class MESAInfer:
             elif lc.data_type == "spectroscopic":
                 self._likelihood = SpectroscopicLikelihood(
                     self.obs_data,
-                    use_teff=lc.use_teff,
-                    use_logg=lc.use_logg,
-                    use_feh=lc.use_feh,
+                    teff_weight=lc.teff_weight if lc.use_teff else 0.0,
+                    logg_weight=lc.logg_weight if lc.use_logg else 0.0,
+                    feh_weight=lc.feh_weight if lc.use_feh else 0.0,
                 )
             else:
                 # Default to SED
@@ -427,6 +477,16 @@ class MESAInfer:
         Returns:
             InferenceResults object with posteriors and diagnostics
         """
+        if not self.parameters:
+            if self.inlist_path is None:
+                raise ValueError("Inlist path is not set. Provide inlist_path or set config.mesa.inlist_name.")
+            self.parse_inlist()
+
+        if self.obs_data is None:
+            if self.data_path is None:
+                raise ValueError("Observational data not loaded. Call load_observations first.")
+            self.load_observations(self.data_path)
+
         # Setup output directory
         self.output_dir.mkdir(parents=True, exist_ok=True)
         (self.output_dir / "runs").mkdir(exist_ok=True)
