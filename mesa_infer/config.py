@@ -66,11 +66,13 @@ class MESAConfig:
     
     mesa_dir: Optional[Path] = None
     work_dir: Optional[Path] = None
+    inlist_name: Optional[str] = None
     
     # Execution settings
     timeout: int = 7200  # 2 hours default
     retry_on_failure: bool = True
     max_retries: int = 3
+    parallel_runs: int = 1
     
     # Output handling
     keep_logs: bool = True
@@ -131,6 +133,9 @@ class LikelihoodConfig:
     # SED fitting
     use_sed_fitting: bool = True
     wavelength_range: tuple = (3000, 25000)  # Angstroms
+    normalize_sed: bool = True
+    fit_scaling: bool = True
+    fit_extinction: bool = False
     
     # Extinction
     apply_extinction: bool = True
@@ -141,6 +146,15 @@ class LikelihoodConfig:
     parallax: Optional[float] = None
     parallax_error: Optional[float] = None
 
+    # Photometric likelihood
+    use_colors: bool = True
+    use_absolute_mags: bool = False
+
+    # Spectroscopic likelihood
+    use_teff: bool = True
+    use_logg: bool = True
+    use_feh: bool = True
+
 
 @dataclass 
 class InferConfig:
@@ -149,6 +163,11 @@ class InferConfig:
     sampler: SamplerConfig = field(default_factory=SamplerConfig)
     mesa: MESAConfig = field(default_factory=MESAConfig)
     likelihood: LikelihoodConfig = field(default_factory=LikelihoodConfig)
+
+    # Backwards-compatible config inputs
+    sampler_config: Optional[Dict[str, Any]] = field(default=None, repr=False)
+    mesa_config: Optional[Dict[str, Any]] = field(default=None, repr=False)
+    likelihood_config: Optional[Dict[str, Any]] = field(default=None, repr=False)
     
     # Output settings
     output_dir: Optional[Path] = None
@@ -160,8 +179,22 @@ class InferConfig:
     plot_interval: int = 10
     
     def __post_init__(self):
+        from dataclasses import asdict
+
         if self.output_dir is not None:
             self.output_dir = Path(self.output_dir)
+
+        if self.sampler_config:
+            sampler_data = {**asdict(self.sampler), **self.sampler_config}
+            self.sampler = SamplerConfig(**sampler_data)
+
+        if self.mesa_config:
+            mesa_data = {**asdict(self.mesa), **self.mesa_config}
+            self.mesa = MESAConfig(**mesa_data)
+
+        if self.likelihood_config:
+            likelihood_data = {**asdict(self.likelihood), **self.likelihood_config}
+            self.likelihood = LikelihoodConfig(**likelihood_data)
     
     @classmethod
     def from_yaml(cls, filepath: Union[str, Path]) -> InferConfig:
@@ -183,6 +216,12 @@ class InferConfig:
         sampler_data = data.get('sampler', {})
         mesa_data = data.get('mesa', {})
         likelihood_data = data.get('likelihood', {})
+
+        if 'wavelength_range' not in likelihood_data:
+            wavelength_min = likelihood_data.pop('wavelength_min', None)
+            wavelength_max = likelihood_data.pop('wavelength_max', None)
+            if wavelength_min is not None and wavelength_max is not None:
+                likelihood_data['wavelength_range'] = (wavelength_min, wavelength_max)
         
         sampler = SamplerConfig(**sampler_data)
         mesa = MESAConfig(**mesa_data)

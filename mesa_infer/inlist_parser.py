@@ -432,6 +432,10 @@ class InlistParser:
     def get_parameter(self, name: str) -> Optional[ParameterSpec]:
         """Get a parameter specification by name."""
         return self.parameters.get(name)
+
+    def get_exploration_parameters(self) -> Dict[str, ParameterSpec]:
+        """Return parameters marked for exploration."""
+        return self.parameters
     
     def get_continuous_parameters(self) -> List[ParameterSpec]:
         """Get all continuous parameters."""
